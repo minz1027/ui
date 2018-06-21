@@ -3,6 +3,9 @@ import { Promise as EmberPromise } from 'rsvp';
 import { get } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import ENV from 'screwdriver-ui/config/environment';
+import templateHelper from 'screwdriver-ui/utils/template';
+
+const { templatesFormatter } = templateHelper;
 
 export default Service.extend({
   session: service(),
@@ -10,7 +13,7 @@ export default Service.extend({
     const url =
       `${ENV.APP.SDAPI_HOSTNAME}/${ENV.APP.SDAPI_NAMESPACE}/templates/${encodeURIComponent(name)}`;
 
-    return this.fetchData(url);
+    return this.fetchData(url).then(templatesFormatter);
   },
   getTemplateTags(name) {
     const url =
@@ -19,15 +22,39 @@ export default Service.extend({
 
     return this.fetchData(url);
   },
-  getAllTemplates() {
+  getAllTemplates(namespace) {
     const url = `${ENV.APP.SDAPI_HOSTNAME}/${ENV.APP.SDAPI_NAMESPACE}/templates`;
 
-    return this.fetchData(url);
+    let params = {};
+
+    if (namespace) {
+      params.namespace = namespace;
+    }
+
+    return this.fetchData(url, params)
+      .then(templatesFormatter)
+      .then((templates) => {
+        // Reduce versions down to one entry
+        // FIXME: This should be done in API
+
+        const result = [];
+        const names = {};
+
+        templates.forEach((t) => {
+          if (!names[t.name]) {
+            names[t.name] = 1;
+            result.push(t);
+          }
+        });
+
+        return result;
+      });
   },
-  fetchData(url) {
+  fetchData(url, params = {}) {
     const ajaxConfig = {
       method: 'GET',
       url,
+      data: params,
       contentType: 'application/json',
       crossDomain: true,
       xhrFields: {

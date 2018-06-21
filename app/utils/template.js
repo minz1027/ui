@@ -17,4 +17,16 @@ const getFullName = (config) => {
   return fullName;
 };
 
-export default { getFullName };
+const templatesFormatter = (templates) => {
+  templates.forEach((t) => {
+    // Add full template name
+    t.fullName = getFullName({
+      name: t.name,
+      namespace: t.namespace
+    });
+  });
+
+  return templates;
+};
+
+export default { getFullName, templatesFormatter };
